@@ -25,6 +25,6 @@ class ArrivalBus:
         return self.minsToArrivalInt() < other.minsToArrivalInt()
 
     def getDict(self):
-        return {"lineName": self.lineName, "destinationName": self.destinationName, "minsToArrival": self.minsToArrivalStr()}
+        return {"lineID": self.lineName, "destinationName": self.destinationName, "minsToArrival": self.minsToArrivalStr()}
 
 

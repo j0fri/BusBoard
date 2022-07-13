@@ -1,7 +1,7 @@
 import os
 from flask import Flask
-#from busboard.models import db, migrate
-from busboard.controllers import register_controllers
+#from BusBoard.models import db, migrate
+from BusBoard.controllers import register_controllers
 
 
 def create_app():
