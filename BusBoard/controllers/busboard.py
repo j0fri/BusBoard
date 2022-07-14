@@ -66,33 +66,40 @@ def busboardRoutes(app):
         postcodeRequestUrl = BASE_URL_POSTCODES + "/postcodes/" + postcode
 
         postcodeData = requests.get(postcodeRequestUrl).json()
-        lat, lon = postcodeData["result"]["latitude"], postcodeData["result"]["longitude"]
 
-        radius = 500
-        results = 0
+        print(postcodeData)
 
-        while results < 2 and radius < 10000000:
-            tflRequestBody = "/StopPoint?lat=" + str(lat) + "&lon=" + str(lon) + "&stopTypes=NaptanPublicBusCoachTram&radius=" + str(radius) + "&"
-            data = requests.get(getRequestUrl(tflRequestBody)).json()["stopPoints"]
+        if 'error' in postcodeData:
+            print("errored")
+            return {"error": postcodeData["error"]}
+        else:
+            lat, lon = postcodeData["result"]["latitude"], postcodeData["result"]["longitude"]
 
-            dataArgs = list(map(lambda x: (x["id"], x["commonName"], x["indicator"], x["distance"]), data))
-            busStops = [BusStop.BusStop(*args) for args in dataArgs]
+            radius = 500
+            results = 0
 
-            busStops.sort()
-            # print([stop.getDict() for stop in busStops])
-            busStops = collateStops(busStops)
+            while results < 2 and radius < 10000000:
+                tflRequestBody = "/StopPoint?lat=" + str(lat) + "&lon=" + str(lon) + "&stopTypes=NaptanPublicBusCoachTram&radius=" + str(radius) + "&"
+                data = requests.get(getRequestUrl(tflRequestBody)).json()["stopPoints"]
 
-            results = len(busStops)
-            radius *= 2
+                dataArgs = list(map(lambda x: (x["id"], x["commonName"], x["indicator"], x["distance"]), data))
+                busStops = [BusStop.BusStop(*args) for args in dataArgs]
 
-        print(busStops)
+                busStops.sort()
+                # print([stop.getDict() for stop in busStops])
+                busStops = collateStops(busStops)
 
-        busStops = busStops[:2]
-        busStopsOutputDict = [[stop.getDict() for stop in stops] for stops in busStops]
-        # busStops.sort()
-        # busStopsOutputDict = [stop.getDict() for stop in busStops]
+                results = len(busStops)
+                radius *= 2
 
-        return {"stops": busStopsOutputDict}
+            print(busStops)
+
+            busStops = busStops[:2]
+            busStopsOutputDict = [[stop.getDict() for stop in stops] for stops in busStops]
+            # busStops.sort()
+            # busStopsOutputDict = [stop.getDict() for stop in busStops]
+
+            return {"stops": busStopsOutputDict}
 
     @app.route('/getArrivalsByPostcode/<postcode>')
     def getArrivalsByPostcode(postcode):
@@ -100,19 +107,23 @@ def busboardRoutes(app):
 
         print(nearbyStops)
 
-        stops1 = nearbyStops["stops"][0]
-        stops2 = nearbyStops["stops"][1]
+        if "error" in nearbyStops:
+            print("Here")
+            return nearbyStops
+        else:
+            stops1 = nearbyStops["stops"][0]
+            stops2 = nearbyStops["stops"][1]
 
-        stopID1 = stops1[0]["id"]
-        stopID2 = stops2[0]["id"]
+            stopID1 = stops1[0]["id"]
+            stopID2 = stops2[0]["id"]
 
-        buses1 = [{"indicator": stop1["indicator"], "arrivals": getArrivalsByStopID(stop1["id"])["data"]} for stop1 in stops1]
-        buses2 = [{"indicator": stop2["indicator"], "arrivals": getArrivalsByStopID(stop2["id"])["data"]} for stop2 in stops2]
+            buses1 = [{"indicator": stop1["indicator"], "arrivals": getArrivalsByStopID(stop1["id"])["data"]} for stop1 in stops1]
+            buses2 = [{"indicator": stop2["indicator"], "arrivals": getArrivalsByStopID(stop2["id"])["data"]} for stop2 in stops2]
 
-        return {
-            "stop1": {"name": stops1[0]["commonName"], "buses": buses1},
-            "stop2": {"name": stops2[0]["commonName"], "buses": buses2}
-        }
+            return {
+                "stop1": {"name": stops1[0]["commonName"], "buses": buses1},
+                "stop2": {"name": stops2[0]["commonName"], "buses": buses2}
+            }
 
 
 
