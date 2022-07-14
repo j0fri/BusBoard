@@ -30,12 +30,21 @@ def busboardRoutes(app):
 
         data = requests.get(getRequestUrl(requestBody)).content
         dataList = ast.literal_eval(data.decode('utf-8'))
+
+        if type(dataList) is dict:
+            if 'exceptionType' in dataList:
+                return {"error": dataList['exceptionType']}
+            else:
+                return {"error": 'Unknown error. Please try again later.'}
+
         dataArgs = list(map(lambda x: (x["lineName"], x["destinationName"], x["expectedArrival"]), dataList))
         arrivals = [ArrivalBus.ArrivalBus(*args) for args in dataArgs]
 
         arrivals.sort()
         arrivals = arrivals[:5]
         arrivalsOutputDict = [arrival.getDict() for arrival in arrivals]
+
+
 
         return {"data": arrivalsOutputDict}
 
