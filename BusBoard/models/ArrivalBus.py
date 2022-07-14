@@ -19,7 +19,12 @@ class ArrivalBus:
 
     def minsToArrivalStr(self):
         mins = self.minsToArrivalInt()
-        return str(mins) if mins else "Due"
+        if mins < 0:
+            return "Late"
+        elif mins == 0:
+            return "Due"
+        else:
+            return str(mins)
 
     def __lt__(self, other):
         return self.minsToArrivalInt() < other.minsToArrivalInt()

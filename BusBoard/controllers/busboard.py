@@ -9,7 +9,7 @@ import random
 from BusBoard.models import ArrivalBus, BusStop
 
 BASE_URL_TFL = "https://api.tfl.gov.uk"
-CREDENTIALS = "app_id=c6406c3cdd754b47af354088b60735a9&app_key=21a0ba9164ed46a3b81f5aaa4c4b635d"
+CREDENTIALS =  "app_id=c6406c3cdd754b47af354088b60735a9&app_key=21a0ba9164ed46a3b81f5aaa4c4b635d"
 
 BASE_URL_POSTCODES = "https://api.postcodes.io"
 
@@ -44,13 +44,22 @@ def busboardRoutes(app):
         arrivals = arrivals[:5]
         arrivalsOutputDict = [arrival.getDict() for arrival in arrivals]
 
-
-
         return {"data": arrivalsOutputDict}
 
+    def collateStops(busStops):
+        collated = {}
+        for stop in busStops:
+            name = stop.commonName
+            if name in collated:
+                collated[name] = collated[name] + [stop]
+            else:
+                collated[name] = [stop]
+
+        return [collated[stop] for stop in collated]
+
+
+
     #TODO: Handle duplicate bus stops
-    #TODO: Handle separate negative times
-    #TODO: Handle not two stops within 500
     #TODO: Handle stands
     @app.route('/getNearBusStops/<postcode>')
     def getNearBusStops(postcode):
@@ -59,17 +68,29 @@ def busboardRoutes(app):
         postcodeData = requests.get(postcodeRequestUrl).json()
         lat, lon = postcodeData["result"]["latitude"], postcodeData["result"]["longitude"]
 
-        tflRequestBody = "/StopPoint?lat=" + str(lat) + "&lon=" + str(lon) + "&stopTypes=NaptanPublicBusCoachTram&radius=500&"
-        data = requests.get(getRequestUrl(tflRequestBody)).json()["stopPoints"]
+        radius = 500
+        results = 0
 
+        while results < 2 and radius < 10000000:
+            tflRequestBody = "/StopPoint?lat=" + str(lat) + "&lon=" + str(lon) + "&stopTypes=NaptanPublicBusCoachTram&radius=" + str(radius) + "&"
+            data = requests.get(getRequestUrl(tflRequestBody)).json()["stopPoints"]
 
-        dataArgs = list(map(lambda x: (x["id"], x["commonName"], x["indicator"], x["distance"]), data))
-        busStops = [BusStop.BusStop(*args) for args in dataArgs]
+            dataArgs = list(map(lambda x: (x["id"], x["commonName"], x["indicator"], x["distance"]), data))
+            busStops = [BusStop.BusStop(*args) for args in dataArgs]
 
-        busStops.sort()
-        # print([stop.getDict() for stop in busStops])
+            busStops.sort()
+            # print([stop.getDict() for stop in busStops])
+            busStops = collateStops(busStops)
+
+            results = len(busStops)
+            radius *= 2
+
+        print(busStops)
+
         busStops = busStops[:2]
-        busStopsOutputDict = [stop.getDict() for stop in busStops]
+        busStopsOutputDict = [[stop.getDict() for stop in stops] for stops in busStops]
+        # busStops.sort()
+        # busStopsOutputDict = [stop.getDict() for stop in busStops]
 
         return {"stops": busStopsOutputDict}
 
@@ -77,15 +98,20 @@ def busboardRoutes(app):
     def getArrivalsByPostcode(postcode):
         nearbyStops = getNearBusStops(postcode)
 
-        stopID1 = nearbyStops["stops"][0]["id"]
-        stopID2 = nearbyStops["stops"][1]["id"]
+        print(nearbyStops)
 
-        buses1 = getArrivalsByStopID(stopID1)
-        buses2 = getArrivalsByStopID(stopID2)
+        stops1 = nearbyStops["stops"][0]
+        stops2 = nearbyStops["stops"][1]
+
+        stopID1 = stops1[0]["id"]
+        stopID2 = stops2[0]["id"]
+
+        buses1 = [{stop1["indicator"]: getArrivalsByStopID(stop1["id"])["data"]} for stop1 in stops1]
+        buses2 = [{stop2["indicator"]: getArrivalsByStopID(stop2["id"])["data"]} for stop2 in stops2]
 
         return {
-            "stop1": {"name": nearbyStops["stops"][0]["commonName"] + " (" + nearbyStops["stops"][0]["indicator"] + ")", "buses": buses1["data"]},
-            "stop2": {"name": nearbyStops["stops"][1]["commonName"] + " (" + nearbyStops["stops"][1]["indicator"] + ")", "buses": buses2["data"]}
+            "stop1": {"name": stops1[0]["commonName"], "buses": buses1},
+            "stop2": {"name": stops2[0]["commonName"], "buses": buses2}
         }
 
 
