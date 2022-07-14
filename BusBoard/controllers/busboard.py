@@ -106,8 +106,8 @@ def busboardRoutes(app):
         stopID1 = stops1[0]["id"]
         stopID2 = stops2[0]["id"]
 
-        buses1 = [{stop1["indicator"]: getArrivalsByStopID(stop1["id"])["data"]} for stop1 in stops1]
-        buses2 = [{stop2["indicator"]: getArrivalsByStopID(stop2["id"])["data"]} for stop2 in stops2]
+        buses1 = [{"indicator": stop1["indicator"], "arrivals": getArrivalsByStopID(stop1["id"])["data"]} for stop1 in stops1]
+        buses2 = [{"indicator": stop2["indicator"], "arrivals": getArrivalsByStopID(stop2["id"])["data"]} for stop2 in stops2]
 
         return {
             "stop1": {"name": stops1[0]["commonName"], "buses": buses1},
