@@ -49,6 +49,9 @@ def busboardRoutes(app):
         return {"data": arrivalsOutputDict}
 
     #TODO: Handle duplicate bus stops
+    #TODO: Handle separate negative times
+    #TODO: Handle not two stops within 500
+    #TODO: Handle stands
     @app.route('/getNearBusStops/<postcode>')
     def getNearBusStops(postcode):
         postcodeRequestUrl = BASE_URL_POSTCODES + "/postcodes/" + postcode
@@ -57,14 +60,14 @@ def busboardRoutes(app):
         lat, lon = postcodeData["result"]["latitude"], postcodeData["result"]["longitude"]
 
         tflRequestBody = "/StopPoint?lat=" + str(lat) + "&lon=" + str(lon) + "&stopTypes=NaptanPublicBusCoachTram&radius=500&"
-
         data = requests.get(getRequestUrl(tflRequestBody)).json()["stopPoints"]
 
-        dataArgs = list(map(lambda x: (x["id"], x["commonName"], x["distance"]), data))
+
+        dataArgs = list(map(lambda x: (x["id"], x["commonName"], x["indicator"], x["distance"]), data))
         busStops = [BusStop.BusStop(*args) for args in dataArgs]
 
         busStops.sort()
-        print([stop.getDict() for stop in busStops])
+        # print([stop.getDict() for stop in busStops])
         busStops = busStops[:2]
         busStopsOutputDict = [stop.getDict() for stop in busStops]
 
@@ -81,8 +84,8 @@ def busboardRoutes(app):
         buses2 = getArrivalsByStopID(stopID2)
 
         return {
-            "stop1": {"name": nearbyStops["stops"][0]["commonName"], "buses": buses1["data"]},
-            "stop2": {"name": nearbyStops["stops"][1]["commonName"], "buses": buses2["data"]}
+            "stop1": {"name": nearbyStops["stops"][0]["commonName"] + " (" + nearbyStops["stops"][0]["indicator"] + ")", "buses": buses1["data"]},
+            "stop2": {"name": nearbyStops["stops"][1]["commonName"] + " (" + nearbyStops["stops"][1]["indicator"] + ")", "buses": buses2["data"]}
         }
 
 
